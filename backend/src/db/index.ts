@@ -7,7 +7,7 @@ let pgPool: Pool | null = null;
 let sqliteDb: SqlJsDatabase | null = null;
 const sqliteFilePath = path.resolve(__dirname, '../../data/xentrix.sqlite');
 
-const isPostgres = !!process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'));
+const isPostgres = () => !!process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'));
 
 // Ensure data directory exists for SQLite
 const dataDir = path.dirname(sqliteFilePath);
@@ -16,11 +16,11 @@ if (!fs.existsSync(dataDir)) {
 }
 
 export async function initDatabase(): Promise<void> {
-  if (isPostgres) {
+  if (isPostgres()) {
     console.log('[DB] Connecting to PostgreSQL via DATABASE_URL...');
     pgPool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DB_SSL === 'true' || process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
     });
     await pgPool.query('SELECT 1');
     console.log('[DB] PostgreSQL connected successfully.');
@@ -192,7 +192,7 @@ async function createTables(): Promise<void> {
 }
 
 export async function exec(sql: string): Promise<void> {
-  if (isPostgres && pgPool) {
+  if (pgPool) {
     await pgPool.query(sql);
   } else if (sqliteDb) {
     sqliteDb.exec(sql);
@@ -201,7 +201,7 @@ export async function exec(sql: string): Promise<void> {
 }
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  if (isPostgres && pgPool) {
+  if (pgPool) {
     let pgSql = sql;
     let paramIdx = 1;
     while (pgSql.includes('?')) {
@@ -228,7 +228,7 @@ export async function get<T = any>(sql: string, params: any[] = []): Promise<T |
 }
 
 export async function run(sql: string, params: any[] = []): Promise<{ changes: number }> {
-  if (isPostgres && pgPool) {
+  if (pgPool) {
     let pgSql = sql;
     let paramIdx = 1;
     while (pgSql.includes('?')) {
@@ -245,3 +245,4 @@ export async function run(sql: string, params: any[] = []): Promise<{ changes: n
   }
   return { changes: 0 };
 }
+
