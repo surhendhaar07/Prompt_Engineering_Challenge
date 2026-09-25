@@ -39,8 +39,6 @@ export const AdminDashboardPage: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [modalAction, setModalAction] = useState<'RESET' | 'REASSIGN' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-
-  // Reset Live Activity Stream Modal State
   const [isResetStreamOpen, setIsResetStreamOpen] = useState(false);
   const [isResettingStream, setIsResettingStream] = useState(false);
 
@@ -121,7 +119,7 @@ export const AdminDashboardPage: React.FC = () => {
     }
   };
 
-  const handleResetStream = async () => {
+  const handleResetActivityStream = async () => {
     setIsResettingStream(true);
     try {
       await adminService.resetActivityLogs();
@@ -129,7 +127,7 @@ export const AdminDashboardPage: React.FC = () => {
       setIsResetStreamOpen(false);
       await fetchDashboard();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to reset activity stream');
+      alert(err.response?.data?.error || 'Failed to reset live activity stream');
     } finally {
       setIsResettingStream(false);
     }
@@ -407,17 +405,18 @@ export const AdminDashboardPage: React.FC = () => {
                   <h2 className="text-base font-bold text-white font-display">Live Activity Stream</h2>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
-                    REAL-TIME
-                  </span>
                   <button
                     type="button"
                     onClick={() => setIsResetStreamOpen(true)}
-                    className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-500/30 transition-all"
-                    title="Reset Live Activity Stream"
+                    className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-red-950/60 border border-red-500/40 text-red-300 hover:bg-red-900/60 hover:text-white flex items-center gap-1 transition-all"
+                    title="Clear and reset live activity stream"
                   >
-                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                    <Trash2 className="w-3 h-3 text-red-400" />
+                    <span>Reset Stream</span>
                   </button>
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                    REAL-TIME
+                  </span>
                 </div>
               </div>
 
@@ -499,11 +498,11 @@ export const AdminDashboardPage: React.FC = () => {
       <ConfirmationModal
         isOpen={isResetStreamOpen}
         title="Reset Live Activity Stream?"
-        message="Are you sure you want to permanently clear all live activity events and proctoring logs from the dashboard? This will purge the stream for all teams."
+        message="Are you sure you want to clear all real-time activity events and proctoring alerts from the dashboard feed? This action will permanently purge the activity log."
         confirmText="Yes, Reset Activity Stream"
         confirmVariant="danger"
         isLoading={isResettingStream}
-        onConfirm={handleResetStream}
+        onConfirm={handleResetActivityStream}
         onCancel={() => setIsResetStreamOpen(false)}
       />
     </div>
