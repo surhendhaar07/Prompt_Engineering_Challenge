@@ -172,35 +172,38 @@ async function createTables(): Promise<void> {
     await exec(sql);
   }
 
-  // Safe alters if upgrading existing DB
-  try {
-    await exec("ALTER TABLE teams ADD COLUMN domain TEXT DEFAULT 'WEB DEVELOPMENT'");
-  } catch (e) {}
+  // Safe alters if upgrading existing SQLite DB
+  if (sqliteDb) {
+    try {
+      await exec("ALTER TABLE teams ADD COLUMN domain TEXT DEFAULT 'WEB DEVELOPMENT'");
+    } catch (e) {}
 
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN domain TEXT DEFAULT 'WEB DEVELOPMENT'");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN title TEXT DEFAULT ''");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN situation TEXT DEFAULT ''");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN task TEXT DEFAULT ''");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN requirements TEXT DEFAULT ''");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN technical_requirements TEXT DEFAULT ''");
-  } catch (e) {}
-  try {
-    await exec("ALTER TABLE questions ADD COLUMN submission_guideline TEXT DEFAULT 'Write one comprehensive prompt that you would give to an AI coding agent.'");
-  } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN domain TEXT DEFAULT 'WEB DEVELOPMENT'");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN title TEXT DEFAULT ''");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN situation TEXT DEFAULT ''");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN task TEXT DEFAULT ''");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN requirements TEXT DEFAULT ''");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN technical_requirements TEXT DEFAULT ''");
+    } catch (e) {}
+    try {
+      await exec("ALTER TABLE questions ADD COLUMN submission_guideline TEXT DEFAULT 'Write one comprehensive prompt that you would give to an AI coding agent.'");
+    } catch (e) {}
+  }
 
   console.log('[DB] Schema verified and updated.');
 }
+
 
 export async function exec(sql: string): Promise<void> {
   if (pgPool) {

@@ -207,10 +207,11 @@ export async function seedDatabase(): Promise<void> {
       );
     } else {
       // Ensure domain is set
-      await db.run('UPDATE teams SET domain = ? WHERE team_name = ? AND (domain IS NULL OR domain = "")', [t.domain, t.name]);
+      await db.run("UPDATE teams SET domain = ? WHERE team_name = ? AND (domain IS NULL OR domain = '')", [t.domain, t.name]);
     }
   }
 }
+
 
 // Auto-run when executed directly via CLI
 if (require.main === module || process.argv[1]?.includes('seed.ts') || process.argv[1]?.includes('seed')) {
