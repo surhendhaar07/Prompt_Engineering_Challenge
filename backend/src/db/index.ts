@@ -1,44 +1,29 @@
 import fs from 'fs';
 import path from 'path';
-import { Pool } from 'pg';
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 
-let pgPool: Pool | null = null;
 let sqliteDb: SqlJsDatabase | null = null;
 const sqliteFilePath = path.resolve(__dirname, '../../data/xentrix.sqlite');
 
-const isPostgres = () => !!process.env.DATABASE_URL && (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'));
-
-// Ensure data directory exists for SQLite
+// Ensure data directory exists for SQLite storage
 const dataDir = path.dirname(sqliteFilePath);
 if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
 export async function initDatabase(): Promise<void> {
-  if (isPostgres()) {
-    console.log('[DB] Connecting to PostgreSQL via DATABASE_URL...');
-    pgPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : false,
-    });
-    await pgPool.query('SELECT 1');
-    console.log('[DB] PostgreSQL connected successfully.');
-    await createTables();
+  console.log('[DB] Initializing SQLite database engine (sql.js WASM)...');
+  const SQL = await initSqlJs();
+  if (fs.existsSync(sqliteFilePath)) {
+    const fileBuffer = fs.readFileSync(sqliteFilePath);
+    sqliteDb = new SQL.Database(fileBuffer);
+    console.log('[DB] Loaded existing SQLite database from disk.');
   } else {
-    console.log('[DB] Initializing SQLite (sql.js WASM engine)...');
-    const SQL = await initSqlJs();
-    if (fs.existsSync(sqliteFilePath)) {
-      const fileBuffer = fs.readFileSync(sqliteFilePath);
-      sqliteDb = new SQL.Database(fileBuffer);
-      console.log('[DB] Loaded existing SQLite database from disk.');
-    } else {
-      sqliteDb = new SQL.Database();
-      console.log('[DB] Created new SQLite database.');
-    }
-    await createTables();
-    persistSqlite();
+    sqliteDb = new SQL.Database();
+    console.log('[DB] Created new SQLite database file.');
   }
+  await createTables();
+  persistSqlite();
 }
 
 function persistSqlite() {
@@ -192,24 +177,14 @@ async function createTables(): Promise<void> {
 }
 
 export async function exec(sql: string): Promise<void> {
-  if (pgPool) {
-    await pgPool.query(sql);
-  } else if (sqliteDb) {
+  if (sqliteDb) {
     sqliteDb.exec(sql);
     persistSqlite();
   }
 }
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  if (pgPool) {
-    let pgSql = sql;
-    let paramIdx = 1;
-    while (pgSql.includes('?')) {
-      pgSql = pgSql.replace('?', `$${paramIdx++}`);
-    }
-    const res = await pgPool.query(pgSql, params);
-    return res.rows as T[];
-  } else if (sqliteDb) {
+  if (sqliteDb) {
     const stmt = sqliteDb.prepare(sql);
     stmt.bind(params);
     const results: T[] = [];
@@ -228,15 +203,7 @@ export async function get<T = any>(sql: string, params: any[] = []): Promise<T |
 }
 
 export async function run(sql: string, params: any[] = []): Promise<{ changes: number }> {
-  if (pgPool) {
-    let pgSql = sql;
-    let paramIdx = 1;
-    while (pgSql.includes('?')) {
-      pgSql = pgSql.replace('?', `$${paramIdx++}`);
-    }
-    const res = await pgPool.query(pgSql, params);
-    return { changes: res.rowCount || 0 };
-  } else if (sqliteDb) {
+  if (sqliteDb) {
     sqliteDb.run(sql, params);
     persistSqlite();
     const changesRes = sqliteDb.exec('SELECT changes() as cnt');
@@ -245,4 +212,3 @@ export async function run(sql: string, params: any[] = []): Promise<{ changes: n
   }
   return { changes: 0 };
 }
-

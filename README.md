@@ -76,7 +76,7 @@ Admin can export full competition evaluation reports with one click in 4 formats
 |---|---|
 | **Frontend** | React 18, TypeScript, Tailwind CSS, Lucide Icons, Socket.IO Client, Canvas Confetti, Vite |
 | **Backend** | Node.js, Express.js, TypeScript, Socket.IO, Bcrypt.js, JSON Web Tokens (JWT), Rate Limiting |
-| **Database** | PostgreSQL (`pg` pool) with built-in SQLite WASM (`sql.js`) fallback for zero-dependency local execution |
+| **Database** | Built-in SQLite WASM (`sql.js`) with zero external database configuration needed |
 | **Document Export** | `docx` (Word), `xlsx` (Excel), `pdfkit` (PDF), custom CSV serializer |
 
 ---
@@ -237,18 +237,11 @@ Visit the application at: **http://localhost:5173**
 
 ## 🌐 Production Deployment Guide
 
-### Database (PostgreSQL)
-Set the `DATABASE_URL` environment variable:
-```env
-DATABASE_URL=postgres://username:password@host:5432/xentrix_db
-DB_SSL=true
-```
-Run the migration script: `database/migrations/schema.sql` on Neon / Supabase / Render / AWS RDS.
-
-### Backend (Render / Railway / VPS)
+### Backend & Frontend (Unified Render / Railway / VPS)
 * Build Command: `npm run build`
 * Start Command: `npm start`
 * Port: Default `5000` or `$PORT`
+* Zero external database setup needed (persists automatically to disk via SQLite WASM).
 
 ### Frontend (Vercel / Netlify)
 * Build Command: `npm run build`
