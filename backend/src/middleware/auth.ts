@@ -61,4 +61,6 @@ export const loginLimiter = rateLimit({
   message: { error: 'Too many login attempts from this IP, please try again after 15 minutes.' },
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false },
 });
+

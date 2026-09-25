@@ -11,6 +11,9 @@ import { checkAndExpireChallenges } from './services/challengeService';
 const app = express();
 const server = http.createServer(app);
 
+// Enable trust proxy for Render, Railway, Cloudflare, etc.
+app.set('trust proxy', 1);
+
 // CORS configuration
 app.use(cors({
   origin: '*',

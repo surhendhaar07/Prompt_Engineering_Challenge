@@ -20,3 +20,7 @@ services:
         value: "Innovate Inspire Elevate"
       - key: CHALLENGE_DURATION_MINUTES
         value: "30"
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_SSL
+        value: "true"
