@@ -4,109 +4,290 @@
 
 @layer base {
   :root {
-    --color-bg: #070b14;
-    --color-card: #0d1322;
-    --color-border: #1f2e4d;
-    --color-cyan: #00d2ff;
-    --color-magenta: #c026d3;
-    --color-orange: #ff5722;
+    --color-bg: #f8fafc;
+    --color-card: #ffffff;
+    --color-border: #e2e8f0;
+    --color-cyan: #0284c7;
+    --color-magenta: #9333ea;
+    --color-orange: #ea580c;
   }
 
   body {
-    background-color: #070b14;
-    color: #f1f5f9;
+    background-color: #f8fafc;
+    color: #0f172a;
     font-family: 'Inter', system-ui, sans-serif;
     overflow-x: hidden;
   }
 
-  /* Custom Cyber Scrollbar */
+  /* Custom Light Theme Scrollbar */
   ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
   }
   ::-webkit-scrollbar-track {
-    background: #090e1a;
+    background: #f1f5f9;
   }
   ::-webkit-scrollbar-thumb {
-    background: #1e293b;
+    background: #cbd5e1;
     border-radius: 4px;
-    border: 1px solid #334155;
+    border: 1px solid #e2e8f0;
   }
   ::-webkit-scrollbar-thumb:hover {
-    background: #0284c7;
+    background: #94a3b8;
   }
 }
 
-/* Glassmorphism & Cyber Card Utilities */
+/* Glassmorphism & Light Card Utilities */
 .glass-panel {
-  background: rgba(13, 19, 34, 0.75);
+  background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(0, 210, 255, 0.15);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
 }
 
 .glass-panel-purple {
-  background: rgba(19, 13, 34, 0.75);
+  background: rgba(250, 245, 255, 0.92);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(192, 38, 211, 0.2);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(192, 38, 211, 0.25);
+  box-shadow: 0 4px 20px -2px rgba(192, 38, 211, 0.08);
 }
 
 .glass-card {
-  background: rgba(18, 26, 45, 0.65);
+  background: #ffffff;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.25s ease-in-out;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+  transition: all 0.2s ease-in-out;
 }
 
 .glass-card:hover {
-  border-color: rgba(0, 210, 255, 0.35);
-  box-shadow: 0 0 20px rgba(0, 210, 255, 0.15);
+  border-color: #0284c7;
+  box-shadow: 0 8px 25px -4px rgba(2, 132, 199, 0.15);
 }
 
-/* Cyber Glow Accents */
-.glow-cyan {
-  text-shadow: 0 0 12px rgba(0, 210, 255, 0.6);
-}
-
-.glow-purple {
-  text-shadow: 0 0 12px rgba(192, 38, 211, 0.6);
-}
-
-.glow-orange {
-  text-shadow: 0 0 12px rgba(255, 87, 34, 0.6);
-}
-
-.border-glow-cyan {
-  border-color: #00d2ff;
-  box-shadow: 0 0 15px rgba(0, 210, 255, 0.35);
-}
-
-.border-glow-orange {
-  border-color: #ff5722;
-  box-shadow: 0 0 15px rgba(255, 87, 34, 0.35);
-}
-
-.border-glow-red {
-  border-color: #ef4444;
-  box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
-  animation: pulse 1.5s infinite;
-}
-
-/* Background Cyber Grid */
+/* Light Theme Cyber Grid & Radials */
 .bg-cyber-grid {
-  background-size: 40px 40px;
+  background-size: 36px 36px;
   background-image: 
-    linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    linear-gradient(to right, rgba(148, 163, 184, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(148, 163, 184, 0.15) 1px, transparent 1px);
+  background-color: #f8fafc;
 }
 
 .bg-radial-gradient {
-  background: radial-gradient(circle at 50% 10%, rgba(0, 210, 255, 0.12), transparent 50%),
-              radial-gradient(circle at 90% 80%, rgba(192, 38, 211, 0.08), transparent 40%),
-              radial-gradient(circle at 10% 90%, rgba(255, 87, 34, 0.08), transparent 40%);
+  background: radial-gradient(circle at 50% 10%, rgba(2, 132, 199, 0.08), transparent 50%),
+              radial-gradient(circle at 90% 80%, rgba(147, 51, 234, 0.06), transparent 40%),
+              radial-gradient(circle at 10% 90%, rgba(249, 115, 22, 0.06), transparent 40%);
+}
+
+/* Global Light Mode Overrides for Dark Utility Classes */
+.bg-\[\#070b14\] {
+  background-color: #f8fafc !important;
+}
+
+.bg-\[\#0a0f1d\] {
+  background-color: #ffffff !important;
+}
+
+.bg-\[\#090e1a\] {
+  background-color: #f8fafc !important;
+}
+
+.bg-\[\#0d1322\] {
+  background-color: #ffffff !important;
+}
+
+.bg-slate-900 {
+  background-color: #ffffff !important;
+}
+
+.bg-slate-900\/50,
+.bg-slate-900\/60,
+.bg-slate-900\/80 {
+  background-color: #f1f5f9 !important;
+}
+
+.bg-slate-800 {
+  background-color: #e2e8f0 !important;
+}
+
+.bg-slate-800\/60,
+.bg-slate-800\/80 {
+  background-color: #e2e8f0 !important;
+}
+
+/* Text Overrides for Light Theme */
+.text-white {
+  color: #0f172a !important;
+}
+
+.text-slate-100 {
+  color: #0f172a !important;
+}
+
+.text-slate-200 {
+  color: #1e293b !important;
+}
+
+.text-slate-300 {
+  color: #334155 !important;
+}
+
+.text-slate-400 {
+  color: #64748b !important;
+}
+
+.text-slate-500 {
+  color: #64748b !important;
+}
+
+.text-slate-600 {
+  color: #94a3b8 !important;
+}
+
+/* Border Overrides for Light Theme */
+.border-slate-800,
+.border-slate-800\/60,
+.border-slate-800\/80,
+.border-slate-800\/90 {
+  border-color: #e2e8f0 !important;
+}
+
+.border-slate-700,
+.border-slate-700\/80 {
+  border-color: #cbd5e1 !important;
+}
+
+.divide-slate-800,
+.divide-slate-800\/60 {
+  border-color: #e2e8f0 !important;
+}
+
+/* Inputs, Textareas, and Selects in Light Theme */
+input[type="text"],
+input[type="password"],
+input[type="number"],
+input[type="email"],
+textarea,
+select {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+/* Light Theme Badges & Category Tags */
+.bg-cyan-950,
+.bg-cyan-950\/40,
+.bg-cyan-950\/60,
+.bg-cyan-950\/80 {
+  background-color: #ecfeff !important;
+  border-color: #a5f3fc !important;
+  color: #0891b2 !important;
+}
+
+.bg-purple-950,
+.bg-purple-950\/20,
+.bg-purple-950\/40,
+.bg-purple-950\/80 {
+  background-color: #faf5ff !important;
+  border-color: #e9d5ff !important;
+  color: #7e22ce !important;
+}
+
+.bg-emerald-950,
+.bg-emerald-950\/40,
+.bg-emerald-950\/60,
+.bg-emerald-950\/70,
+.bg-emerald-950\/80 {
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  color: #059669 !important;
+}
+
+.bg-amber-950,
+.bg-amber-950\/40,
+.bg-amber-950\/80 {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  color: #b45309 !important;
+}
+
+.bg-red-950,
+.bg-red-950\/10,
+.bg-red-950\/20,
+.bg-red-950\/30,
+.bg-red-950\/40,
+.bg-red-950\/70,
+.bg-red-950\/80,
+.bg-red-950\/90 {
+  background-color: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #dc2626 !important;
+}
+
+.text-cyan-300,
+.text-cyan-400 {
+  color: #0284c7 !important;
+}
+
+.text-purple-300,
+.text-purple-400 {
+  color: #7e22ce !important;
+}
+
+.text-emerald-300,
+.text-emerald-400 {
+  color: #059669 !important;
+}
+
+.text-amber-300,
+.text-amber-400 {
+  color: #b45309 !important;
+}
+
+.text-red-300,
+.text-red-400 {
+  color: #dc2626 !important;
+}
+
+/* Primary Action Buttons (Preserve High-Contrast White Text on Vibrant Gradients) */
+button.bg-gradient-to-r,
+.bg-gradient-to-r span,
+button.bg-gradient-to-r span,
+.bg-cyan-500,
+.bg-blue-600,
+.bg-purple-600,
+.bg-emerald-500,
+.bg-emerald-600,
+.bg-red-600 {
+  color: #ffffff !important;
+}
+
+/* Header & Navigation */
+header.bg-\[\#070b14\]\/90 {
+  background-color: rgba(255, 255, 255, 0.94) !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+}
+
+aside {
+  background-color: #ffffff !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* Modal Backdrops */
+.bg-black\/80,
+.bg-black\/85,
+.bg-black\/90,
+.bg-black\/95 {
+  background-color: rgba(15, 23, 42, 0.6) !important;
 }
 
 /* Prevent Selection for Challenge Areas */
@@ -124,7 +305,6 @@
   }
 }
 
-/* Extension Overlay Shielding: Enforce isolation */
 #root {
   position: relative;
   z-index: 10;

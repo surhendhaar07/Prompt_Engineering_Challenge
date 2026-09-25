@@ -20,7 +20,8 @@ import {
   Eye,
   RefreshCw,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -38,6 +39,10 @@ export const AdminDashboardPage: React.FC = () => {
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [modalAction, setModalAction] = useState<'RESET' | 'REASSIGN' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+
+  // Reset Live Activity Stream Modal State
+  const [isResetStreamOpen, setIsResetStreamOpen] = useState(false);
+  const [isResettingStream, setIsResettingStream] = useState(false);
 
   const fetchDashboard = useCallback(async () => {
     try {
@@ -113,6 +118,20 @@ export const AdminDashboardPage: React.FC = () => {
       alert(err.response?.data?.error || 'Action failed');
     } finally {
       setIsProcessing(false);
+    }
+  };
+
+  const handleResetStream = async () => {
+    setIsResettingStream(true);
+    try {
+      await adminService.resetActivityLogs();
+      setActivityFeed([]);
+      setIsResetStreamOpen(false);
+      await fetchDashboard();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to reset activity stream');
+    } finally {
+      setIsResettingStream(false);
     }
   };
 
@@ -387,9 +406,19 @@ export const AdminDashboardPage: React.FC = () => {
                   <Activity className="w-4 h-4 text-cyan-400" />
                   <h2 className="text-base font-bold text-white font-display">Live Activity Stream</h2>
                 </div>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
-                  REAL-TIME
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400">
+                    REAL-TIME
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsResetStreamOpen(true)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-950/40 border border-transparent hover:border-red-500/30 transition-all"
+                    title="Reset Live Activity Stream"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                  </button>
+                </div>
               </div>
 
               <div className="flex-1 space-y-2.5 overflow-y-auto max-h-[480px] pr-1">
@@ -464,6 +493,18 @@ export const AdminDashboardPage: React.FC = () => {
           setModalAction(null);
           setSelectedTeam(null);
         }}
+      />
+
+      {/* Confirmation Modal for Reset Live Activity Stream */}
+      <ConfirmationModal
+        isOpen={isResetStreamOpen}
+        title="Reset Live Activity Stream?"
+        message="Are you sure you want to permanently clear all live activity events and proctoring logs from the dashboard? This will purge the stream for all teams."
+        confirmText="Yes, Reset Activity Stream"
+        confirmVariant="danger"
+        isLoading={isResettingStream}
+        onConfirm={handleResetStream}
+        onCancel={() => setIsResetStreamOpen(false)}
       />
     </div>
   );
