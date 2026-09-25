@@ -221,3 +221,72 @@ export async function deleteTeam(
 
   return true;
 }
+
+export async function bulkImportTeams(
+  teamList: { team_name: string; team_number?: string; password: string; domain?: string }[],
+  admin: { id: string; username: string }
+): Promise<{ added: number; skipped: number; errors: string[] }> {
+  let added = 0;
+  let skipped = 0;
+  const errors: string[] = [];
+
+  for (const item of teamList) {
+    const team_name = (item.team_name || '').trim();
+    const team_number = (item.team_number || '').trim() || null;
+    const password = (item.password || '').trim();
+    let domain = (item.domain || '').trim().toUpperCase();
+    if (domain !== 'GEN AI APPLICATION' && domain !== 'WEB DEVELOPMENT') {
+      domain = 'WEB DEVELOPMENT';
+    }
+
+    if (!team_name || !password) {
+      errors.push(`Row missing team name or password: "${team_name || 'Unknown'}"`);
+      skipped++;
+      continue;
+    }
+
+    // Check if team or user exists
+    const existingTeam = await db.get('SELECT id FROM teams WHERE team_name = ?', [team_name]);
+    const existingUser = await db.get('SELECT id FROM users WHERE username = ?', [team_name]);
+
+    if (existingTeam || existingUser) {
+      errors.push(`Team "${team_name}" already exists, skipped.`);
+      skipped++;
+      continue;
+    }
+
+    try {
+      const userId = uuidv4();
+      const teamId = uuidv4();
+      const now = new Date().toISOString();
+      const passHash = await hashPassword(password);
+
+      await db.run(
+        'INSERT INTO users (id, username, password_hash, role, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, team_name, passHash, 'participant', 1, now, now]
+      );
+
+      await db.run(
+        'INSERT INTO teams (id, user_id, team_name, team_number, domain, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [teamId, userId, team_name, team_number, domain, 1, now, now]
+      );
+
+      added++;
+    } catch (err: any) {
+      errors.push(`Error creating team "${team_name}": ${err.message}`);
+      skipped++;
+    }
+  }
+
+  await logAdminAction(
+    admin.id,
+    admin.username,
+    'IMPORT_TEAMS',
+    'TEAM',
+    'BULK',
+    `Imported ${added} teams from Excel file (Skipped: ${skipped})`
+  );
+
+  return { added, skipped, errors };
+}
+

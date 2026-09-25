@@ -95,6 +95,25 @@ export async function createTeam(req: AuthenticatedRequest, res: Response): Prom
   }
 }
 
+export async function importTeams(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const { teams } = req.body;
+    if (!Array.isArray(teams) || teams.length === 0) {
+      res.status(400).json({ error: 'Valid array of teams is required for import' });
+      return;
+    }
+
+    const admin = { id: req.user!.userId, username: req.user!.username };
+    const result = await teamService.bulkImportTeams(teams, admin);
+    res.status(200).json({
+      message: `Successfully imported ${result.added} teams (${result.skipped} skipped)`,
+      ...result,
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message || 'Failed to import teams' });
+  }
+}
+
 export async function updateTeam(req: AuthenticatedRequest, res: Response): Promise<void> {
   try {
     const id = String(req.params.id);
@@ -316,6 +335,24 @@ export async function getActivityLogs(req: AuthenticatedRequest, res: Response):
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to fetch activity logs' });
+  }
+}
+
+export async function resetActivityLogs(req: AuthenticatedRequest, res: Response): Promise<void> {
+  try {
+    const admin = { id: req.user!.userId, username: req.user!.username };
+    await activityService.resetActivityLogs();
+    await auditService.logAdminAction(
+      admin.id,
+      admin.username,
+      'RESET_ACTIVITY_LOGS',
+      'SYSTEM',
+      'ALL',
+      'Cleared/Reset all Live Activity Stream logs'
+    );
+    res.json({ message: 'Live Activity Stream reset successfully' });
+  } catch (err: any) {
+    res.status(500).json({ error: 'Failed to reset activity logs' });
   }
 }
 

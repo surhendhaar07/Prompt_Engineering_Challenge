@@ -4,6 +4,7 @@ import {
   getTeams,
   getTeamDetails,
   createTeam,
+  importTeams,
   updateTeam,
   changeTeamPassword,
   deleteTeam,
@@ -15,6 +16,7 @@ import {
   getSubmissions,
   getSubmissionById,
   getActivityLogs,
+  resetActivityLogs,
   getAuditLogs,
   getSettings,
   updateSettings,
@@ -35,6 +37,7 @@ router.get('/dashboard', getDashboardStats);
 // Teams
 router.get('/teams', getTeams);
 router.post('/teams', createTeam);
+router.post('/teams/import', importTeams);
 router.get('/teams/:id', getTeamDetails);
 router.put('/teams/:id', updateTeam);
 router.put('/teams/:id/password', changeTeamPassword);
@@ -55,6 +58,7 @@ router.get('/submissions/:id', getSubmissionById);
 
 // Activity and Audit
 router.get('/activity', getActivityLogs);
+router.delete('/activity', resetActivityLogs);
 router.get('/audit', getAuditLogs);
 
 // Settings

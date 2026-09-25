@@ -5,6 +5,7 @@ import { Sidebar } from '../components/Sidebar';
 import { StatusBadge } from '../components/StatusBadge';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import * as adminService from '../services/adminService';
+import * as XLSX from 'xlsx';
 import { Team, ChallengeDomain } from '../types';
 import {
   Users,
@@ -22,7 +23,12 @@ import {
   RefreshCw,
   Layers,
   Sparkles,
-  Check
+  Check,
+  FileSpreadsheet,
+  UploadCloud,
+  Download,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 
 export const AdminTeamsPage: React.FC = () => {
@@ -40,6 +46,14 @@ export const AdminTeamsPage: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
+
+  // Excel Import States
+  const [importFileName, setImportFileName] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<Array<{ team_number?: string; team_name: string; password: string; domain?: string; isValid: boolean; error?: string }>>([]);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccessMsg, setImportSuccessMsg] = useState<string | null>(null);
+  const [isImportSubmitting, setIsImportSubmitting] = useState(false);
 
   // Selected Team & Forms
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -99,6 +113,146 @@ export const AdminTeamsPage: React.FC = () => {
       fetchTeams();
     } finally {
       setUpdatingDomainId(null);
+    }
+  };
+
+  // Download Sample Excel Template
+  const handleDownloadTemplate = () => {
+    const sampleData = [
+      {
+        'Team ID': 'XT-01',
+        'Team Name': 'Alpha_Coders',
+        'Password': 'pass@alpha123',
+        'Domain': 'WEB DEVELOPMENT',
+      },
+      {
+        'Team ID': 'XT-02',
+        'Team Name': 'Neural_Architects',
+        'Password': 'pass@neural456',
+        'Domain': 'GEN AI APPLICATION',
+      },
+      {
+        'Team ID': 'XT-03',
+        'Team Name': 'Cyber_Synthesizers',
+        'Password': 'pass@cyber789',
+        'Domain': 'WEB DEVELOPMENT',
+      },
+    ];
+
+    const ws = XLSX.utils.json_to_sheet(sampleData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Teams_Template');
+    XLSX.writeFile(wb, 'xentrix26_teams_import_template.xlsx');
+  };
+
+  // Parse Uploaded Excel/CSV File
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImportFileName(file.name);
+    setImportError(null);
+    setImportSuccessMsg(null);
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: 'binary' });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const rawData: any[] = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+        if (rawData.length === 0) {
+          setImportError('The uploaded Excel file contains no data rows.');
+          setImportPreview([]);
+          return;
+        }
+
+        const parsedRows = rawData.map((row) => {
+          const keys = Object.keys(row);
+          const findVal = (patterns: string[]) => {
+            for (const key of keys) {
+              const cleanKey = key.trim().toLowerCase().replace(/[\s_-]+/g, '');
+              for (const p of patterns) {
+                if (cleanKey.includes(p)) return String(row[key]).trim();
+              }
+            }
+            return '';
+          };
+
+          const team_number = findVal(['teamid', 'teamnumber', 'teamno', 'number', 'id']) || '';
+          const team_name = findVal(['teamname', 'name', 'team', 'username']) || '';
+          const password = findVal(['password', 'pass', 'pwd']) || '';
+          let domain = findVal(['domain', 'track', 'category']).toUpperCase();
+
+          if (domain !== 'GEN AI APPLICATION' && domain !== 'WEB DEVELOPMENT') {
+            domain = 'WEB DEVELOPMENT';
+          }
+
+          let isValid = true;
+          let error = '';
+
+          if (!team_name) {
+            isValid = false;
+            error = 'Missing Team Name';
+          } else if (!password) {
+            isValid = false;
+            error = 'Missing Password';
+          }
+
+          return {
+            team_number,
+            team_name,
+            password,
+            domain,
+            isValid,
+            error,
+          };
+        });
+
+        setImportPreview(parsedRows);
+      } catch (err: any) {
+        setImportError(`Failed to parse file: ${err.message || 'Invalid format'}`);
+        setImportPreview([]);
+      }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  // Submit Bulk Teams to Backend
+  const handleImportConfirm = async () => {
+    const validTeams = importPreview.filter((r) => r.isValid);
+    if (validTeams.length === 0) {
+      setImportError('No valid teams to import. Please check your file.');
+      return;
+    }
+
+    setIsImportSubmitting(true);
+    setImportError(null);
+
+    try {
+      const res = await adminService.importTeams(
+        validTeams.map((t) => ({
+          team_name: t.team_name,
+          team_number: t.team_number || undefined,
+          password: t.password,
+          domain: t.domain,
+        }))
+      );
+
+      setImportSuccessMsg(`Successfully imported ${res.added} teams! (${res.skipped} skipped)`);
+      await fetchTeams();
+      setTimeout(() => {
+        setIsImportOpen(false);
+        setImportPreview([]);
+        setImportFileName(null);
+        setImportSuccessMsg(null);
+      }, 2500);
+    } catch (err: any) {
+      setImportError(err.response?.data?.error || 'Failed to import teams');
+    } finally {
+      setIsImportSubmitting(false);
     }
   };
 
@@ -225,19 +379,38 @@ export const AdminTeamsPage: React.FC = () => {
               </p>
             </div>
 
-            <button
-              onClick={() => {
-                setFormTeamName('');
-                setFormTeamNumber('');
-                setFormPassword('');
-                setFormError(null);
-                setIsCreateOpen(true);
-              }}
-              className="px-5 py-2.5 rounded-xl font-bold text-xs font-mono uppercase tracking-wider text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-[0_0_20px_rgba(0,210,255,0.3)] transition-all flex items-center gap-2 self-start sm:self-auto"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Create New Team</span>
-            </button>
+            <div className="flex flex-wrap items-center gap-3 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setImportPreview([]);
+                  setImportFileName(null);
+                  setImportError(null);
+                  setImportSuccessMsg(null);
+                  setIsImportOpen(true);
+                }}
+                className="px-4 py-2.5 rounded-xl font-bold text-xs font-mono uppercase tracking-wider text-emerald-300 bg-emerald-950/60 border border-emerald-500/50 hover:bg-emerald-900/60 hover:text-white shadow-[0_0_15px_rgba(16,185,129,0.25)] transition-all flex items-center gap-2"
+                title="Import teams in bulk from Excel (.xlsx / .csv)"
+              >
+                <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
+                <span>Import Excel</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setFormTeamName('');
+                  setFormTeamNumber('');
+                  setFormPassword('');
+                  setFormError(null);
+                  setIsCreateOpen(true);
+                }}
+                className="px-5 py-2.5 rounded-xl font-bold text-xs font-mono uppercase tracking-wider text-white bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 shadow-[0_0_20px_rgba(0,210,255,0.3)] transition-all flex items-center gap-2"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Team</span>
+              </button>
+            </div>
           </div>
 
           {/* Search bar & Domain Filter */}
@@ -730,6 +903,205 @@ export const AdminTeamsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Import Teams from Excel Modal */}
+      {isImportOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="max-w-3xl w-full glass-panel p-6 sm:p-8 rounded-2xl border border-emerald-500/40 shadow-[0_0_50px_rgba(16,185,129,0.25)] space-y-5 max-h-[90vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-emerald-950/80 border border-emerald-500/50 text-emerald-400">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-white font-display">
+                    Bulk Import Teams from Excel
+                  </h3>
+                  <p className="text-xs text-slate-400 font-mono">
+                    Upload an .xlsx, .xls, or .csv file with Team ID, Team Name, Password & Domain
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsImportOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Success Message Banner */}
+            {importSuccessMsg && (
+              <div className="p-3.5 rounded-xl bg-emerald-950/70 border border-emerald-500/50 text-emerald-300 text-xs font-mono flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span>{importSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Error Message Banner */}
+            {importError && (
+              <div className="p-3.5 rounded-xl bg-red-950/70 border border-red-500/50 text-red-300 text-xs font-mono flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                <span>{importError}</span>
+              </div>
+            )}
+
+            {/* Upload Area & Sample Download Toolbar */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="sm:col-span-2 relative border-2 border-dashed border-emerald-500/40 hover:border-emerald-400/80 rounded-2xl p-5 bg-emerald-950/10 text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-2">
+                <input
+                  type="file"
+                  accept=".xlsx, .xls, .csv"
+                  onChange={handleFileUpload}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                />
+                <UploadCloud className="w-8 h-8 text-emerald-400 animate-bounce" />
+                <span className="text-xs font-mono font-bold text-slate-200">
+                  {importFileName ? (
+                    <span className="text-emerald-400">{importFileName}</span>
+                  ) : (
+                    'Click or Drag & Drop Excel file (.xlsx, .xls, .csv)'
+                  )}
+                </span>
+                <span className="text-[11px] font-mono text-slate-500">
+                  Headers: Team ID | Team Name | Password | Domain
+                </span>
+              </div>
+
+              <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col justify-between space-y-3">
+                <div>
+                  <span className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider block">
+                    Excel Template
+                  </span>
+                  <p className="text-[11px] text-slate-500 font-mono mt-1">
+                    Download standard formatted sheet with sample teams.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDownloadTemplate}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-semibold text-cyan-400 hover:bg-slate-800 hover:border-cyan-500/50 flex items-center justify-center gap-2 transition-all shadow-sm"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Sample</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Live Preview Table */}
+            {importPreview.length > 0 && (
+              <div className="flex-1 flex flex-col space-y-2 min-h-0">
+                <div className="flex items-center justify-between text-xs font-mono">
+                  <span className="text-slate-300">
+                    Detected Teams:{' '}
+                    <strong className="text-emerald-400">{importPreview.length}</strong> (
+                    <span className="text-emerald-400">
+                      {importPreview.filter((r) => r.isValid).length} valid
+                    </span>
+                    {importPreview.some((r) => !r.isValid) && (
+                      <span className="text-red-400 ml-1">
+                        • {importPreview.filter((r) => !r.isValid).length} invalid
+                      </span>
+                    )}
+                    )
+                  </span>
+                </div>
+
+                <div className="overflow-y-auto max-h-[220px] rounded-xl border border-slate-800 bg-[#090e1a]">
+                  <table className="w-full text-left text-xs font-mono">
+                    <thead className="sticky top-0 bg-slate-900/95 border-b border-slate-800 text-slate-400 uppercase text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3">#</th>
+                        <th className="py-2.5 px-3">Team ID</th>
+                        <th className="py-2.5 px-3">Team Name</th>
+                        <th className="py-2.5 px-3">Password</th>
+                        <th className="py-2.5 px-3">Domain</th>
+                        <th className="py-2.5 px-3">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                      {importPreview.map((row, idx) => (
+                        <tr
+                          key={idx}
+                          className={row.isValid ? 'hover:bg-slate-900/40' : 'bg-red-950/20'}
+                        >
+                          <td className="py-2 px-3 text-slate-500">{idx + 1}</td>
+                          <td className="py-2 px-3 font-semibold text-cyan-300">
+                            {row.team_number || '—'}
+                          </td>
+                          <td className="py-2 px-3 font-bold text-white">{row.team_name}</td>
+                          <td className="py-2 px-3 text-slate-400 font-mono">
+                            {'•'.repeat(Math.min(row.password.length, 8)) || '—'}
+                          </td>
+                          <td className="py-2 px-3">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                row.domain === 'GEN AI APPLICATION'
+                                  ? 'bg-purple-950/80 text-purple-300 border border-purple-500/40'
+                                  : 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/40'
+                              }`}
+                            >
+                              {row.domain}
+                            </span>
+                          </td>
+                          <td className="py-2 px-3">
+                            {row.isValid ? (
+                              <span className="text-emerald-400 flex items-center gap-1 text-[11px]">
+                                <Check className="w-3.5 h-3.5" /> Ready
+                              </span>
+                            ) : (
+                              <span className="text-red-400 flex items-center gap-1 text-[11px]">
+                                <X className="w-3.5 h-3.5" /> {row.error}
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Actions */}
+            <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsImportOpen(false);
+                  setImportPreview([]);
+                  setImportFileName(null);
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs font-mono transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleImportConfirm}
+                disabled={isImportSubmitting || importPreview.filter((r) => r.isValid).length === 0}
+                className="px-6 py-2.5 rounded-xl font-bold font-mono text-xs uppercase tracking-wider text-white bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all disabled:opacity-40 disabled:pointer-events-none flex items-center gap-2"
+              >
+                {isImportSubmitting ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Importing Teams...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>
+                      Confirm & Import {importPreview.filter((r) => r.isValid).length} Teams
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
         </div>
       )}

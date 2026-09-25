@@ -3,6 +3,7 @@ import { Navbar } from '../components/Navbar';
 import { Sidebar } from '../components/Sidebar';
 import { useSocket } from '../context/SocketContext';
 import * as adminService from '../services/adminService';
+import { ConfirmationModal } from '../components/ConfirmationModal';
 import { ActivityLog } from '../types';
 import {
   Activity,
@@ -11,7 +12,9 @@ import {
   Filter,
   RefreshCw,
   AlertTriangle,
-  Radio
+  Radio,
+  Trash2,
+  CheckCircle2
 } from 'lucide-react';
 
 export const AdminActivityPage: React.FC = () => {
@@ -21,6 +24,9 @@ export const AdminActivityPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [eventTypeFilter, setEventTypeFilter] = useState('ALL');
   const [isLoading, setIsLoading] = useState(true);
+  const [isResetOpen, setIsResetOpen] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetSuccessMsg, setResetSuccessMsg] = useState<string | null>(null);
 
   const fetchLogs = useCallback(async () => {
     try {
@@ -36,6 +42,22 @@ export const AdminActivityPage: React.FC = () => {
       setIsLoading(false);
     }
   }, [eventTypeFilter]);
+
+  const handleResetActivityStream = async () => {
+    setIsResetting(true);
+    try {
+      await adminService.resetActivityLogs();
+      setLogs([]);
+      setTotal(0);
+      setIsResetOpen(false);
+      setResetSuccessMsg('Live Activity Stream has been reset successfully.');
+      setTimeout(() => setResetSuccessMsg(null), 5000);
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to reset activity stream');
+    } finally {
+      setIsResetting(false);
+    }
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -79,14 +101,35 @@ export const AdminActivityPage: React.FC = () => {
               </p>
             </div>
 
-            <button
-              onClick={fetchLogs}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-2 self-start sm:self-auto"
-            >
-              <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Refresh Log</span>
-            </button>
+            <div className="flex items-center gap-2.5 self-start sm:self-auto">
+              <button
+                type="button"
+                onClick={fetchLogs}
+                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-mono font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-2 transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Refresh Log</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsResetOpen(true)}
+                className="px-4 py-2.5 rounded-xl bg-red-950/40 border border-red-500/50 text-xs font-mono font-semibold text-red-300 hover:bg-red-900/60 hover:text-white flex items-center gap-2 shadow-[0_0_15px_rgba(239,68,68,0.2)] transition-all"
+                title="Clear and reset live proctoring activity stream"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                <span>Reset Stream</span>
+              </button>
+            </div>
           </div>
+
+          {/* Success Banner */}
+          {resetSuccessMsg && (
+            <div className="p-3.5 rounded-xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 text-xs font-mono flex items-center gap-2 animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{resetSuccessMsg}</span>
+            </div>
+          )}
 
           {/* Filters */}
           <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -212,6 +255,18 @@ export const AdminActivityPage: React.FC = () => {
           </div>
         </main>
       </div>
+
+      {/* Reset Live Activity Stream Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={isResetOpen}
+        title="Reset Live Activity Stream?"
+        message="Are you sure you want to permanently clear all recorded activity events and forensic proctoring logs? This action will purge the stream for all teams and cannot be undone."
+        confirmText="Yes, Reset Activity Stream"
+        confirmVariant="danger"
+        isLoading={isResetting}
+        onConfirm={handleResetActivityStream}
+        onCancel={() => setIsResetOpen(false)}
+      />
     </div>
   );
 };

@@ -31,6 +31,11 @@ export async function createTeam(data: { team_name: string; password: string; te
   return response.data;
 }
 
+export async function importTeams(teams: { team_name: string; password: string; team_number?: string; domain?: string }[]): Promise<{ message: string; added: number; skipped: number; errors: string[] }> {
+  const response = await api.post('/admin/teams/import', { teams });
+  return response.data;
+}
+
 export async function updateTeam(id: string, data: { team_name?: string; team_number?: string; domain?: ChallengeDomain; is_active?: boolean | number }): Promise<{ message: string; team: Team }> {
   const response = await api.put(`/admin/teams/${id}`, data);
   return response.data;
@@ -120,6 +125,11 @@ export async function getSubmissionById(id: string): Promise<Submission> {
 // Logs
 export async function getActivityLogs(params: { teamId?: string; eventType?: string; limit?: number; offset?: number } = {}): Promise<{ logs: ActivityLog[]; total: number }> {
   const response = await api.get('/admin/activity', { params });
+  return response.data;
+}
+
+export async function resetActivityLogs(): Promise<{ message: string }> {
+  const response = await api.delete('/admin/activity');
   return response.data;
 }
 

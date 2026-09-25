@@ -99,3 +99,8 @@ export async function getActivityLogs(
 
   return { logs, total };
 }
+
+export async function resetActivityLogs(): Promise<void> {
+  await db.run('DELETE FROM activity_logs');
+}
+
