@@ -211,3 +211,19 @@ export async function seedDatabase(): Promise<void> {
     }
   }
 }
+
+// Auto-run when executed directly via CLI
+if (require.main === module || process.argv[1]?.includes('seed.ts') || process.argv[1]?.includes('seed')) {
+  (async () => {
+    try {
+      await db.initDatabase();
+      await seedDatabase();
+      console.log('[Seed] Database initialization and seeding complete.');
+      process.exit(0);
+    } catch (err) {
+      console.error('[Seed] Error seeding database:', err);
+      process.exit(1);
+    }
+  })();
+}
+
