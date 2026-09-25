@@ -1,9 +1,15 @@
 import fs from 'fs';
 import path from 'path';
+import { Pool } from 'pg';
 import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
 
+let pgPool: Pool | null = null;
 let sqliteDb: SqlJsDatabase | null = null;
 const sqliteFilePath = path.resolve(__dirname, '../../data/xentrix.sqlite');
+
+const isPostgres = () =>
+  !!process.env.DATABASE_URL &&
+  (process.env.DATABASE_URL.startsWith('postgres://') || process.env.DATABASE_URL.startsWith('postgresql://'));
 
 // Ensure data directory exists for SQLite storage
 const dataDir = path.dirname(sqliteFilePath);
@@ -12,18 +18,43 @@ if (!fs.existsSync(dataDir)) {
 }
 
 export async function initDatabase(): Promise<void> {
-  console.log('[DB] Initializing SQLite database engine (sql.js WASM)...');
-  const SQL = await initSqlJs();
-  if (fs.existsSync(sqliteFilePath)) {
-    const fileBuffer = fs.readFileSync(sqliteFilePath);
-    sqliteDb = new SQL.Database(fileBuffer);
-    console.log('[DB] Loaded existing SQLite database from disk.');
+  if (isPostgres()) {
+    console.log('[DB] Connecting to PostgreSQL (Neon / Railway / Cloud)...');
+    
+    // Remote cloud databases (Neon, Railway, Supabase) require SSL with rejectUnauthorized: false
+    const isRemote =
+      !process.env.DATABASE_URL!.includes('localhost') &&
+      !process.env.DATABASE_URL!.includes('127.0.0.1');
+    const enableSsl = process.env.DB_SSL === 'true' || isRemote || process.env.NODE_ENV === 'production';
+
+    pgPool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: enableSsl ? { rejectUnauthorized: false } : false,
+    });
+
+    try {
+      await pgPool.query('SELECT 1');
+      console.log('[DB] PostgreSQL connected successfully.');
+    } catch (err: any) {
+      console.error('[DB] PostgreSQL connection error:', err.message);
+      throw err;
+    }
+
+    await createTables();
   } else {
-    sqliteDb = new SQL.Database();
-    console.log('[DB] Created new SQLite database file.');
+    console.log('[DB] Initializing SQLite database engine (sql.js WASM)...');
+    const SQL = await initSqlJs();
+    if (fs.existsSync(sqliteFilePath)) {
+      const fileBuffer = fs.readFileSync(sqliteFilePath);
+      sqliteDb = new SQL.Database(fileBuffer);
+      console.log('[DB] Loaded existing SQLite database from disk.');
+    } else {
+      sqliteDb = new SQL.Database();
+      console.log('[DB] Created new SQLite database file.');
+    }
+    await createTables();
+    persistSqlite();
   }
-  await createTables();
-  persistSqlite();
 }
 
 function persistSqlite() {
@@ -39,8 +70,8 @@ function persistSqlite() {
 }
 
 async function createTables(): Promise<void> {
-  const schemaSql = `
-    CREATE TABLE IF NOT EXISTS users (
+  const tableStatements = [
+    `CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
@@ -48,9 +79,8 @@ async function createTables(): Promise<void> {
       is_active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS teams (
+    )`,
+    `CREATE TABLE IF NOT EXISTS teams (
       id TEXT PRIMARY KEY,
       user_id TEXT UNIQUE NOT NULL,
       team_name TEXT UNIQUE NOT NULL,
@@ -59,9 +89,8 @@ async function createTables(): Promise<void> {
       is_active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS questions (
+    )`,
+    `CREATE TABLE IF NOT EXISTS questions (
       id TEXT PRIMARY KEY,
       domain TEXT DEFAULT 'WEB DEVELOPMENT',
       title TEXT NOT NULL,
@@ -76,9 +105,8 @@ async function createTables(): Promise<void> {
       is_active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS challenges (
+    )`,
+    `CREATE TABLE IF NOT EXISTS challenges (
       id TEXT PRIMARY KEY,
       team_id TEXT NOT NULL,
       question_id TEXT NOT NULL,
@@ -95,9 +123,8 @@ async function createTables(): Promise<void> {
       paste_attempt_count INTEGER DEFAULT 0,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS submissions (
+    )`,
+    `CREATE TABLE IF NOT EXISTS submissions (
       id TEXT PRIMARY KEY,
       challenge_id TEXT NOT NULL,
       team_id TEXT NOT NULL,
@@ -114,9 +141,8 @@ async function createTables(): Promise<void> {
       paste_attempt_count INTEGER DEFAULT 0,
       status TEXT NOT NULL DEFAULT 'SUBMITTED',
       created_at TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS activity_logs (
+    )`,
+    `CREATE TABLE IF NOT EXISTS activity_logs (
       id TEXT PRIMARY KEY,
       team_id TEXT NOT NULL,
       team_name TEXT NOT NULL,
@@ -124,9 +150,8 @@ async function createTables(): Promise<void> {
       event_type TEXT NOT NULL,
       details TEXT,
       timestamp TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS admin_audit_logs (
+    )`,
+    `CREATE TABLE IF NOT EXISTS admin_audit_logs (
       id TEXT PRIMARY KEY,
       admin_id TEXT NOT NULL,
       admin_username TEXT NOT NULL,
@@ -135,16 +160,17 @@ async function createTables(): Promise<void> {
       target_id TEXT,
       details TEXT,
       timestamp TEXT NOT NULL
-    );
-
-    CREATE TABLE IF NOT EXISTS system_settings (
+    )`,
+    `CREATE TABLE IF NOT EXISTS system_settings (
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
-    );
-  `;
+    )`,
+  ];
 
-  await exec(schemaSql);
+  for (const sql of tableStatements) {
+    await exec(sql);
+  }
 
   // Safe alters if upgrading existing DB
   try {
@@ -177,14 +203,24 @@ async function createTables(): Promise<void> {
 }
 
 export async function exec(sql: string): Promise<void> {
-  if (sqliteDb) {
+  if (pgPool) {
+    await pgPool.query(sql);
+  } else if (sqliteDb) {
     sqliteDb.exec(sql);
     persistSqlite();
   }
 }
 
 export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
-  if (sqliteDb) {
+  if (pgPool) {
+    let pgSql = sql;
+    let paramIdx = 1;
+    while (pgSql.includes('?')) {
+      pgSql = pgSql.replace('?', `$${paramIdx++}`);
+    }
+    const res = await pgPool.query(pgSql, params);
+    return res.rows as T[];
+  } else if (sqliteDb) {
     const stmt = sqliteDb.prepare(sql);
     stmt.bind(params);
     const results: T[] = [];
@@ -203,7 +239,15 @@ export async function get<T = any>(sql: string, params: any[] = []): Promise<T |
 }
 
 export async function run(sql: string, params: any[] = []): Promise<{ changes: number }> {
-  if (sqliteDb) {
+  if (pgPool) {
+    let pgSql = sql;
+    let paramIdx = 1;
+    while (pgSql.includes('?')) {
+      pgSql = pgSql.replace('?', `$${paramIdx++}`);
+    }
+    const res = await pgPool.query(pgSql, params);
+    return { changes: res.rowCount || 0 };
+  } else if (sqliteDb) {
     sqliteDb.run(sql, params);
     persistSqlite();
     const changesRes = sqliteDb.exec('SELECT changes() as cnt');
