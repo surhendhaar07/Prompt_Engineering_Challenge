@@ -1,0 +1,23 @@
+{
+  "name": "xentrix-prompt-engineering-challenge",
+  "version": "1.0.0",
+  "description": "XenTriX'26 Prompt Engineering Challenge Web Application",
+  "scripts": {
+    "install-all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "start": "node backend/dist/server.js",
+    "seed": "npm run seed --prefix backend"
+  },
+  "keywords": [
+    "xentrix",
+    "prompt-engineering",
+    "symposium",
+    "react",
+    "express",
+    "typescript"
+  ],
+  "author": "XenTriX'26 Technical Committee",
+  "license": "MIT"
+}

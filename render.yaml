@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: xentrix-prompt-challenge
+    env: node
+    plan: free
+    buildCommand: npm run install-all && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        value: Admin@XenTriX2026
+      - key: SYMPOSIUM_NAME
+        value: "XenTriX'26"
+      - key: TAGLINE
+        value: "Innovate Inspire Elevate"
+      - key: CHALLENGE_DURATION_MINUTES
+        value: "30"
